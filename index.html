@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kalendar va Oylik Xarajatlar</title>
+    <style>
+        :root { --primary: #8b5cf6; --success: #10b981; --danger: #ef4444; --bg: #0f071e; --card: rgba(30, 20, 50, 0.85); --text: #f3e8ff; --border: #4c1d95; --hover: #2e1065; }
+        [data-theme="light"] { --primary: #7c3aed; --bg: #f5f3ff; --card: #ffffff; --text: #1e1b4b; --border: #ddd6fe; --hover: #ede9fe; }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; transition: background 0.3s, color 0.3s; }
+        
+        @keyframes glowingBg {
+            0% { background-color: #0f071e; }
+            50% { background-color: #21113c; }
+            100% { background-color: #0f071e; }
+        }
+
+        body { 
+            animation: glowingBg 6s infinite ease-in-out;
+            background-color: var(--bg); 
+            color: var(--text); 
+            padding: 20px; 
+            display: flex; 
+            justify-content: center; 
+            min-height: 100vh; 
+        }
+
+        .container { width: 100%; max-width: 900px; }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+        .header-btns { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .action-btn { background: none; border: 1px solid var(--border); padding: 8px 12px; border-radius: 8px; cursor: pointer; color: var(--text); font-size: 13px; }
+        .action-btn:hover { background: var(--hover); }
+
+        .monthly-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .sum-card { background: var(--card); backdrop-filter: blur(10px); padding: 15px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 4px 15px rgba(139, 92, 246, 0.15); position: relative; }
+        .sum-card h4 { font-size: 13px; color: #d8b4fe; margin-bottom: 5px; }
+        [data-theme="light"] .sum-card h4 { color: #5b21b6; }
+        .sum-card .val { font-size: 20px; font-weight: bold; }
+        .limit-info { font-size: 11px; margin-top: 5px; color: #f43f5e; }
+
+        .calendar-section, .debt-section, .history-section { background: var(--card); backdrop-filter: blur(10px); padding: 20px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 4px 15px rgba(139, 92, 246, 0.15); margin-bottom: 20px; }
+        .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .cal-header h3 { font-size: 18px; font-weight: bold; color: var(--text); }
+        .cal-header button { background: var(--primary); color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+        
+        .weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-weight: bold; font-size: 13px; color: #d8b4fe; margin-bottom: 8px; }
+        [data-theme="light"] .weekdays { color: #5b21b6; }
+        .days-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+        
+        .day-cell { min-height: 80px; background: rgba(30, 15, 50, 0.5); border: 1px solid var(--border); border-radius: 8px; padding: 6px; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; }
+        [data-theme="light"] .day-cell { background: #f8fafc; }
+        .day-cell:hover { background: var(--hover); border-color: var(--primary); }
+        .day-num { font-size: 13px; font-weight: 600; }
+        .day-data { font-size: 10px; margin-top: 2px; }
+        .day-inc { color: #34d399; font-weight: bold; }
+        .day-exp { color: #f87171; font-weight: bold; }
+        .empty-cell { background: transparent; border: none; cursor: default; }
+
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: var(--card); backdrop-filter: blur(15px); padding: 25px; border-radius: 12px; width: 100%; max-width: 400px; border: 1px solid var(--border); }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 13px; margin-bottom: 5px; color: #d8b4fe; }
+        [data-theme="light"] .form-group label { color: #5b21b6; }
+        input, select { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: rgba(0,0,0,0.3); color: var(--text); }
+        [data-theme="light"] input, [data-theme="light"] select { background: #fff; }
+        .modal-btns { display: flex; justify-content: flex-end; gap: 10px; }
+        .btn-save { background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
+        .btn-close { background: #475569; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid var(--border); font-size: 13px; }
+        .del-btn { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #ef4444; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
+        .add-cat-box { display: flex; gap: 5px; margin-top: 5px; }
+
+        .footer-contact { text-align: center; padding: 20px; border-top: 1px solid var(--border); margin-top: 20px; font-size: 14px; }
+        .footer-contact p { margin-bottom: 8px; font-weight: 600; color: #d8b4fe; }
+        [data-theme="light"] .footer-contact p { color: #5b21b6; }
+        .footer-links { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; }
+        .footer-links a { color: var(--text); text-decoration: none; border-bottom: 1px dashed var(--primary); }
+        .footer-links a:hover { color: var(--primary); }
+    </style>
+</head>
+<body data-theme="dark">
+
+<div class="container">
+    <div class="header">
+        <h2>📅 Kalendar va Oylik Xarajatlar</h2>
+        <div class="header-btns">
+            <select id="currencySelect" class="action-btn" onchange="changeCurrency()">
+                <option value="so'm">So'm (UZS)</option>
+                <option value="$">Dollar ($)</option>
+            </select>
+            <button class="action-btn" onclick="setMonthlyLimit()">⚙️ Limit</button>
+            <button class="action-btn" onclick="clearAllData()">🗑️ Tozalash</button>
+            <button class="action-btn" onclick="toggleTheme()">🌙/☀️ Rejim</button>
+        </div>
+    </div>
+
+    <div class="monthly-summary">
+        <div class="sum-card">
+            <h4>Bu oydagi Jami Kirim</h4>
+            <div class="val" id="monthlyInc" style="color: #34d399;">0</div>
+        </div>
+        <div class="sum-card">
+            <h4>Bu oydagi Jami Chiqim</h4>
+            <div class="val" id="monthlyExp" style="color: #f87171;">0</div>
+            <div class="limit-info" id="limitWarning"></div>
+        </div>
+        <div class="sum-card">
+            <h4>Shu oydagi Qoldiq</h4>
+            <div class="val" id="monthlyBalance">0</div>
+        </div>
+    </div>
+
+    <div class="calendar-section">
+        <div class="cal-header">
+            <button onclick="changeMonth(-1)">❮ Oldingi oy</button>
+            <h3 id="calMonthTitle">Oy va Yil</h3>
+            <button onclick="changeMonth(1)">Keyingi oy ❯</button>
+        </div>
+        <div class="weekdays">
+            <div>Du</div><div>Se</div><div>Ch</div><div>Pa</div><div>Ju</div><div>Sh</div><div>Ya</div>
+        </div>
+        <div class="days-grid" id="calendarDays"></div>
+    </div>
+
+    <!-- Qarzlar daftari -->
+    <div class="debt-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h3>🤝 Qarzlar Daftari (Kimga berdim / Kimdan oldim)</h3>
+            <button class="btn-save" onclick="openDebtModal()" style="padding: 5px 10px; font-size: 12px;">+ Qarz qo'shish</button>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Ism</th>
+                    <th>Turi</th>
+                    <th>Summa</th>
+                    <th>Izoh</th>
+                    <th>Amal</th>
+                </tr>
+            </thead>
+            <tbody id="debtTable"></tbody>
+        </table>
+    </div>
+
+    <div class="history-section">
+        <h3>📝 Shu oydagi barcha harakatlar</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Sana</th>
+                    <th>Turi</th>
+                    <th>Kategoriya</th>
+                    <th>Izoh</th>
+                    <th>Summa</th>
+                    <th>Amal</th>
+                </tr>
+            </thead>
+            <tbody id="transTable"></tbody>
+        </table>
+    </div>
+
+    <div class="footer-contact">
+        <p>Bog'lanish uchun:</p>
+        <div class="footer-links">
+            <a href="https://t.me/Muslimjon890" target="_blank">Telegram: @Muslimjon890</a>
+            <a href="https://instagram.com/Mashrapov_770" target="_blank">Instagram: Mashrapov_770</a>
+            <a href="tel:+998943248308">Tel: +998 94 324 83 08</a>
+        </div>
+    </div>
+</div>
+
+<!-- Xarajat qo'shish oynasi -->
+<div class="modal" id="dayModal">
+    <div class="modal-content">
+        <h3 id="modalDateTitle" style="margin-bottom: 15px;">Sana</h3>
+        <div class="form-group">
+            <label>Amal turi</label>
+            <select id="transType" onchange="handleTypeChange()">
+                <option value="expense">🔴 Chiqim (Sarflash)</option>
+                <option value="income">🟢 Kirim (Topish)</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Kategoriya</label>
+            <select id="transCategory"></select>
+            <div class="add-cat-box">
+                <input type="text" id="newCategoryInput" placeholder="Yangi kategoriya..." style="font-size: 12px; padding: 6px;">
+                <button class="btn-save" type="button" onclick="addNewCategory()" style="padding: 6px 10px; font-size: 12px;">Qo'shish</button>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Izoh</label>
+            <input type="text" id="transDesc" placeholder="Izoh kiriting...">
+        </div>
+        <div class="form-group">
+            <label>Summa</label>
+            <input type="number" id="transSum" placeholder="Masalan: 50000">
+        </div>
+        <div class="modal-btns">
+            <button class="btn-close" onclick="closeModal()">Yopish</button>
+            <button class="btn-save" onclick="saveTransaction()">Saqlash</button>
+        </div>
+    </div>
+</div>
+
+<!-- Qarz qo'shish oynasi -->
+<div class="modal" id="debtModal">
+    <div class="modal-content">
+        <h3 style="margin-bottom: 15px;">Yangi qarz qo'shish</h3>
+        <div class="form-group">
+            <label>Kim bilan (Ism)</label>
+            <input type="text" id="debtPerson" placeholder="Masalan: Anvar">
+        </div>
+        <div class="form-group">
+            <label>Qarz turi</label>
+            <select id="debtType">
+                <option value="given">Menga qarz berdi (Olib turibman)</option>
+                <option value="taken">Men qarz berdim (Berib turibman)</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Summa</label>
+            <input type="number" id="debtSum" placeholder="Summa...">
+        </div>
+        <div class="form-group">
+            <label>Izoh</label>
+            <input type="text" id="debtDesc" placeholder="Qachon qaytaradi?">
+        </div>
+        <div class="modal-btns">
+            <button class="btn-close" onclick="closeDebtModal()">Yopish</button>
+            <button class="btn-save" onclick="saveDebt()">Saqlash</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
+    let debts = JSON.parse(localStorage.getItem('debts')) || [];
+    let currentCurrency = localStorage.getItem('currency') || "so'm";
+    let monthlyLimits = JSON.parse(localStorage.getItem('monthlyLimits')) || {};
+    
+    let customIncomeCats = JSON.parse(localStorage.getItem('customIncCats')) || ['Maosh', 'Biznes', 'Boshqa daromad'];
+    let customExpenseCats = JSON.parse(localStorage.getItem('customExpCats')) || ['Oziq-ovqat', 'Transport', "Kommunal to'lov", 'Kiyim-kechak', 'Boshqa'];
+
+    let currentDate = new Date();
+    let selectedDateStr = "";
+
+    document.getElementById('currencySelect').value = currentCurrency;
+    document.body.dataset.theme = localStorage.getItem('theme') || 'dark';
+
+    const monthsNames = ["Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun", "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr"];
+
+    function handleTypeChange() {
+        const type = document.getElementById('transType').value;
+        const catSelect = document.getElementById('transCategory');
+        catSelect.innerHTML = '';
+        const list = type === 'income' ? customIncomeCats : customExpenseCats;
+        list.forEach(c => {
+            catSelect.innerHTML += `<option value="${c}">${c}</option>`;
+        });
+    }
+
+    function addNewCategory() {
+        const input = document.getElementById('newCategoryInput');
+        const val = input.value.trim();
+        const type = document.getElementById('transType').value;
+        if(!val) return alert("Kategoriya nomini kiriting!");
+
+        if(type === 'income') {
+            if(!customIncomeCats.includes(val)) customIncomeCats.push(val);
+            localStorage.setItem('customIncCats', JSON.stringify(customIncomeCats));
+        } else {
+            if(!customExpenseCats.includes(val)) customExpenseCats.push(val);
+            localStorage.setItem('customExpCats', JSON.stringify(customExpenseCats));
+        }
+        input.value = '';
+        handleTypeChange();
+        document.getElementById('transCategory').value = val;
+    }
+
+    function saveData() {
+        localStorage.setItem('transactions', JSON.stringify(transactions));
+        localStorage.setItem('debts', JSON.stringify(debts));
+        renderCalendar();
+        renderDebts();
+    }
+
+    function changeCurrency() {
+        currentCurrency = document.getElementById('currencySelect').value;
+        localStorage.setItem('currency', currentCurrency);
+        renderCalendar();
+        renderDebts();
+    }
+
+    function setMonthlyLimit() {
+        const yearMonth = `${currentDate.getFullYear()}-${currentDate.getMonth()}`;
+        const currentLimit = monthlyLimits[yearMonth] || 0;
+        const val = prompt(`Bu oy (${monthsNames[currentDate.getMonth()]}) uchun chiqim limitini kiriting:`, currentLimit);
+        if(val !== null) {
+            monthlyLimits[yearMonth] = parseFloat(val) || 0;
+            localStorage.setItem('monthlyLimits', JSON.stringify(monthlyLimits));
+            renderCalendar();
+        }
+    }
+
+    function clearAllData() {
+        if (confirm("Haqiqatan ham barcha ma'lumotlarni o'chirib yubormoqchimisiz?")) {
+            transactions = [];
+            debts = [];
+            saveData();
+        }
+    }
+
+    function changeMonth(direction) {
+        currentDate.setMonth(currentDate.getMonth() + direction);
+        renderCalendar();
+    }
+
+    function renderCalendar() {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        const yearMonthKey = `${year}-${month}`;
+
+        document.getElementById('calMonthTitle').textContent = `${monthsNames[month]} ${year}`;
+
+        let firstDayIndex = new Date(year, month, 1).getDay();
+        firstDayIndex = (firstDayIndex === 0) ? 6 : firstDayIndex - 1;
+
+        const totalDays = new Date(year, month + 1, 0).getDate();
+        const grid = document.getElementById('calendarDays');
+        grid.innerHTML = '';
+
+        for (let i = 0; i < firstDayIndex; i++) {
+            grid.innerHTML += `<div class="day-cell empty-cell"></div>`;
+        }
+
+        let mInc = 0, mExp = 0;
+        const currentMonthTrans = [];
+
+        for (let day = 1; day <= totalDays; day++) {
+            const formattedDay = day < 10 ? '0' + day : day;
+            const formattedMonth = (month + 1) < 10 ? '0' + (month + 1) : (month + 1);
+            const dateStr = `${year}-${formattedMonth}-${formattedDay}`;
+
+            const dayTrans = transactions.filter(t => t.date === dateStr);
+            let dayInc = 0, dayExp = 0;
+
+            dayTrans.forEach(t => {
+                if (t.type === 'income') dayInc += t.sum;
+                else dayExp += t.sum;
+            });
+
+            mInc += dayInc;
+            mExp += dayExp;
+            dayTrans.forEach(t => currentMonthTrans.push({ ...t }));
+
+            grid.innerHTML += `
+                <div class="day-cell" onclick="openModal('${dateStr}')">
+                    <div class="day-num">${day}</div>
+                    <div class="day-data">
+                        ${dayInc > 0 ? `<div class="day-inc">+${dayInc.toLocaleString()}</div>` : ''}
+                        ${dayExp > 0 ? `<div class="day-exp">-${dayExp.toLocaleString()}</div>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        document.getElementById('monthlyInc').textContent = mInc.toLocaleString() + " " + currentCurrency;
+        document.getElementById('monthlyExp').textContent = mExp.toLocaleString() + " " + currentCurrency;
+        document.getElementById('monthlyBalance').textContent = (mInc - mExp).toLocaleString() + " " + currentCurrency;
+
+        // Limitni tekshirish
+        const limit = monthlyLimits[yearMonthKey] || 0;
+        const warnEl = document.getElementById('limitWarning');
+        if(limit > 0) {
+            if(mExp > limit) {
+                warnEl.textContent = `⚠️ Limitdan oshdi! (Limit: ${limit.toLocaleString()} ${currentCurrency})`;
+            } else {
+                warnEl.textContent = `Limit: ${limit.toLocaleString()} ${currentCurrency}`;
+            }
+        } else {
+            warnEl.textContent = `Limit belgilanmagan`;
+        }
+
+        const tbody = document.getElementById('transTable');
+        tbody.innerHTML = '';
+        currentMonthTrans.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        currentMonthTrans.forEach(t => {
+            tbody.innerHTML += `
+                <tr>
+                    <td>${t.date}</td>
+                    <td>${t.type === 'income' ? '🟢 Kirim' : '🔴 Chiqim'}</td>
+                    <td>${t.category}</td>
+                    <td>${t.desc}</td>
+                    <td style="color: ${t.type === 'income' ? '#34d399' : '#f87171'}">
+                        ${t.type === 'income' ? '+' : '-'}${t.sum.toLocaleString()} ${currentCurrency}
+                    </td>
+                    <td><button class="del-btn" onclick="deleteTrans(${t.id})">O'chirish</button></td>
+                </tr>
+            `;
+        });
+    }
+
+    function renderDebts() {
+        const tbody = document.getElementById('debtTable');
+        tbody.innerHTML = '';
+        debts.forEach(d => {
+            tbody.innerHTML += `
+                <tr>
+                    <td><b>${d.person}</b></td>
+                    <td>${d.type === 'given' ? '🔴 Menga berdi' : '🟢 Men berdim'}</td>
+                    <td style="font-weight: bold;">${d.sum.toLocaleString()} ${currentCurrency}</td>
+                    <td>${d.desc}</td>
+                    <td><button class="del-btn" onclick="deleteDebt(${d.id})">O'chirish</button></td>
+                </tr>
+            `;
+        });
+    }
+
+    function openModal(dateStr) {
+        selectedDateStr = dateStr;
+        document.getElementById('modalDateTitle').textContent = `Sana: ${dateStr}`;
+        document.getElementById('transType').value = 'expense';
+        handleTypeChange();
+        document.getElementById('transDesc').value = '';
+        document.getElementById('transSum').value = '';
+        document.getElementById('dayModal').style.display = 'flex';
+    }
+
+    function closeModal() { document.getElementById('dayModal').style.display = 'none'; }
+
+    function openDebtModal() {
+        document.getElementById('debtPerson').value = '';
+        document.getElementById('debtSum').value = '';
+        document.getElementById('debtDesc').value = '';
+        document.getElementById('debtModal').style.display = 'flex';
+    }
+
+    function closeDebtModal() { document.getElementById('debtModal').style.display = 'none'; }
+
+    function saveTransaction() {
+        const type = document.getElementById('transType').value;
+        const category = document.getElementById('transCategory').value;
+        const desc = document.getElementById('transDesc').value;
+        const sum = parseFloat(document.getElementById('transSum').value);
+
+        if (!desc || !sum) return alert("Iltimos izoh va summani kiriting!");
+
+        transactions.push({ id: Date.now(), date: selectedDateStr, type, category, desc, sum });
+        closeModal();
+        saveData();
+    }
+
+    function saveDebt() {
+        const person = document.getElementById('debtPerson').value;
+        const type = document.getElementById('debtType').value;
+        const sum = parseFloat(document.getElementById('debtSum').value);
+        const desc = document.getElementById('debtDesc').value;
+
+        if(!person || !sum) return alert("Ism va summani kiriting!");
+
+        debts.push({ id: Date.now(), person, type, sum, desc });
+        closeDebtModal();
+        saveData();
+    }
+
+    function deleteTrans(id) {
+        transactions = transactions.filter(t => t.id !== id);
+        saveData();
+    }
+
+    function deleteDebt(id) {
+        debts = debts.filter(d => d.id !== id);
+        saveData();
+    }
+
+    function toggleTheme() {
+        const body = document.body;
+        body.dataset.theme = body.dataset.theme === 'light' ? 'dark' : 'light';
+        localStorage.setItem('theme', body.dataset.theme);
+    }
+
+    renderCalendar();
+    renderDebts();
+</script>
+</body>
+</html>
